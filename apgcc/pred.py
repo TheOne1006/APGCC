@@ -183,3 +183,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+# python pred.py -c configs/SHHA_test.yml -i demo/demo1.jpg -o output/prediction -w ../output/SHHA_best.pth
