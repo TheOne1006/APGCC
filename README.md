@@ -132,4 +132,50 @@ If you find this work useful, please consider citing us!
 }
 ```
 
+# VGG模型导出工具
+
+这个工具用于将带有批归一化(BN)层的VGG模型导出为ONNX格式，支持动态输入尺寸。
+
+## 环境准备
+
+安装必要的依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+## 使用方法
+
+### 基本用法
+
+使用默认参数导出VGG16_BN模型：
+
+```bash
+python apgcc/export_vgg.py
+```
+
+这将导出预训练的VGG16_BN模型到当前目录下的`vgg16_bn.onnx`文件。
+
+### 高级用法
+
+```bash
+python apgcc/export_vgg.py --model vgg19_bn --output models/vgg19_bn.onnx --input-shape 1 3 640 480
+```
+
+### 参数说明
+
+- `--model`: 指定要导出的VGG模型名称，可选值包括`vgg11_bn`，`vgg13_bn`，`vgg16_bn`，`vgg19_bn`等。默认为`vgg16_bn`。
+- `--output`: 指定输出的ONNX文件路径。默认为`vgg16_bn.onnx`。
+- `--pretrained`: 是否使用预训练权重。默认为True。
+- `--verify`: 是否验证导出的ONNX模型。默认为True。
+- `--input-shape`: 指定输入张量的形状，格式为`[batch_size channels height width]`。默认为`[1 3 224 224]`。
+
+## 动态输入尺寸
+
+导出的ONNX模型支持动态批大小和动态图像尺寸。这意味着您可以使用不同尺寸的图像进行推理，而不需要重新导出模型。
+
+## 验证模型
+
+脚本会自动验证导出的ONNX模型，确保它能够正确处理不同尺寸的输入。
+
 

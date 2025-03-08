@@ -41,7 +41,6 @@ def preprocess_image(image_path):
     # 应用标准变换
     transform = standard_transforms.Compose([
         standard_transforms.ToTensor(),
-        standard_transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     
     img_tensor = transform(img)
@@ -81,9 +80,7 @@ def preprocess_image(image_path):
         print(f"图像已调整为32的倍数尺寸: {new_w}x{new_h}")
     
     # 转回PIL图像用于可视化
-    denorm = DeNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    img_denorm = denorm(img_tensor.clone())
-    img_np = img_denorm.permute(1, 2, 0).cpu().numpy()
+    img_np = img_tensor.permute(1, 2, 0).cpu().numpy()
     img_pil = Image.fromarray((img_np * 255).astype(np.uint8))
     
     return img_tensor.unsqueeze(0), img_pil
@@ -143,11 +140,17 @@ def main():
     
     # 预处理图像
     image_path = os.path.join(os.path.dirname(__file__), args.input)
+    
+    # 使用32的倍数作为示例输入尺寸
+    # img_tensor.shape = (1, 3, H, W)
+    # original_img.shape = (H, W, 3)
     img_tensor, original_img = preprocess_image(image_path)
     
     # 预测
     with torch.no_grad():
         img_tensor = img_tensor.to(device)
+        
+        # 获取输入形状
         outputs = model(img_tensor)
         
         # 获取预测结果

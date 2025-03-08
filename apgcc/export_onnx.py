@@ -26,6 +26,10 @@ def parse_args():
     cfg_temp.config_file = args.config_file
     return cfg_temp, args
 
+
+
+
+
 def main():
     
     # 解析参数并加载配置
@@ -114,8 +118,9 @@ def main():
     except Exception as e:
         print(f"ONNX导出失败: {e}")
 
+
 if __name__ == "__main__":
     main()
 
 
-# python  export_onnx.py  -c configs/SHHA_test.yml  -w ../output/SHHA_best.pth -o ../output/onnx/m
+# python  export_onnx.py  -c configs/SHHA_test.yml  -w ../output/SHHA_best.pth -o ../output/onnx/model.onnx
