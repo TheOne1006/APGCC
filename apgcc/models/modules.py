@@ -409,13 +409,21 @@ def ifi_feat(res, size, stride=1, local=False):
     # local is define local patch: 3*3 mapping near by center point.
     bs, hh, ww = res.shape[0], res.shape[-2], res.shape[-1]
     h , w = size
-    coords = (make_coord((h,w)).cuda().flip(-1) + 1) / 2
-    #coords = (make_coord((h,w)).flip(-1) + 1) / 2
+    
+    # 检查CUDA是否可用
+    device = res.device
+    
+    coords = make_coord((h,w))
+    coords = coords.to(device).flip(-1) + 1
+    coords = coords / 2
+    
+    #coords = (make_coord((h,w)).cuda().flip(-1) + 1) / 2
     coords = coords.unsqueeze(0).expand(bs, *coords.shape)
     coords = (coords*2-1).flip(-1)
 
-    feat_coords = make_coord((hh,ww), flatten=False).cuda().permute(2, 0, 1) .unsqueeze(0).expand(res.shape[0], 2, *(hh,ww))
-
+    feat_coords = make_coord((hh,ww), flatten=False)
+    feat_coords = feat_coords.to(device).permute(2, 0, 1).unsqueeze(0).expand(res.shape[0], 2, *(hh,ww))
+    
     if local:
         vx_list = [-1, 1]
         vy_list = [-1, 1]
