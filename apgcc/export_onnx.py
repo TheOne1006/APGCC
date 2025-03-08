@@ -37,9 +37,9 @@ def visualize_prediction_with_pytorch(model, img_tensor, original_img, device, b
         outputs_scores, outputs_points = predict(model, img_tensor, device)
         
             
-        print(f"outputs_scores.shape: {outputs_scores.shape}")
-        print(f"outputs_scores.std: {outputs_scores.std()}")
-        print(f"outputs_scores.mean: {outputs_scores.mean()}")
+        # print(f"outputs_scores.shape: {outputs_scores.shape}")
+        # print(f"outputs_scores.std: {outputs_scores.std()}")
+        # print(f"outputs_scores.mean: {outputs_scores.mean()}")
         
         
         mask = outputs_scores > threshold
