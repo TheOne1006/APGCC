@@ -17,24 +17,68 @@ class AnchorPoints(nn.Module):
         self.line = line
 
     def forward(self, image):
-        image_shape = image.shape[2:] # image shape: h,w
-        image_shape = np.array(image_shape)
-        image_shapes = (image_shape + self.stride - 1) // self.stride # get downsample scale
-        # get reference points for each level
-        # each anchor block expand the number (row * line) of anchors
-        anchor_points = self._generate_anchor_points(self.stride, row=self.row, line=self.line) # control the shift in the anchor block
-        # anchor_map
-        shifted_anchor_points = self._shift(image_shapes, self.stride, anchor_points)
-        # get final anchor_map
-        all_anchor_points = np.zeros((0, 2)).astype(np.float32)
-        all_anchor_points = np.append(all_anchor_points, shifted_anchor_points, axis=0)
-        all_anchor_points = np.expand_dims(all_anchor_points, axis=0)
-        # send reference points to device
-        if torch.cuda.is_available():
-            return torch.from_numpy(all_anchor_points.astype(np.float32)).cuda()
-        else:
-            return torch.from_numpy(all_anchor_points.astype(np.float32))
+        # 使用纯张量操作，避免torch.tensor()
+        # 获取特征图高度和宽度
+        h, w = image.shape[2], image.shape[3]
+        
+        # 计算下采样后的特征图大小，避免使用numpy操作
+        h_feature = (h + self.stride - 1) // self.stride
+        w_feature = (w + self.stride - 1) // self.stride
+        
+        # 生成anchor points
+        anchor_points = self._generate_anchor_points_tensor(self.stride, row=self.row, line=self.line, device=image.device)
+        
+        # 生成shifted anchor points - 直接传递标量而不是张量
+        shifted_anchor_points = self._shift_tensor_v2(h_feature, w_feature, self.stride, anchor_points)
+        
+        # 添加批次维度
+        shifted_anchor_points = shifted_anchor_points.unsqueeze(0)
+        return shifted_anchor_points
 
+    def _generate_anchor_points_tensor(self, stride=16, row=3, line=3, device='cuda'):
+        # generate the reference points in grid layout
+        row_step = stride / row
+        line_step = stride / line
+
+        shift_x = ((torch.arange(1, line + 1, device=device).float() - 0.5) * line_step - stride / 2)
+        shift_y = ((torch.arange(1, row + 1, device=device).float() - 0.5) * row_step - stride / 2)
+
+        # 创建网格
+        shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
+        
+        # 堆叠并转置
+        shift_x = shift_x.reshape(-1)
+        shift_y = shift_y.reshape(-1)
+        anchor_points = torch.stack([shift_x, shift_y], dim=1)
+        
+        return anchor_points
+    
+    def _shift_tensor_v2(self, h_feature, w_feature, stride, anchor_points):
+        # shift the meta-anchor to get anchor points
+        device = anchor_points.device
+        shift_x = (torch.arange(0, w_feature, device=device).float() + 0.5) * stride
+        shift_y = (torch.arange(0, h_feature, device=device).float() + 0.5) * stride
+
+        # 创建网格
+        shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
+
+        # 堆叠并转置
+        shift_x = shift_x.reshape(-1)
+        shift_y = shift_y.reshape(-1)
+        shifts = torch.stack([shift_x, shift_y], dim=1)
+
+        A = anchor_points.size(0)  # num_of_points
+        K = shifts.size(0)  # num_of_pixel 
+        
+        # 广播加法
+        shifts_reshape = shifts.view(K, 1, 2)
+        anchor_points_reshape = anchor_points.view(1, A, 2)
+        all_anchor_points = shifts_reshape + anchor_points_reshape
+        all_anchor_points = all_anchor_points.view(-1, 2)
+        
+        return all_anchor_points
+
+    # 保留原始numpy实现，以便与新版本比较或回退
     def _generate_anchor_points(self, stride=16, row=3, line=3):
         # generate the reference points in grid layout
         row_step = stride / row

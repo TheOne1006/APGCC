@@ -116,22 +116,10 @@ def visualize_prediction(image, points, output_path):
     print(f"可视化结果已保存至: {output_path}")
     return output_path
 
-def main():
-    # 解析参数并加载配置
-    cfg, args = parse_args()
-    
-    # 设置设备
-    device = torch.device(f'cuda:{cfg.GPU_ID}' if torch.cuda.is_available() else 'cpu')
-    print(f"使用设备: {device}")
-    
-    # 构建模型
-    model = build_model(cfg, training=False)
-    
-    # 加载模型权重
-    checkpoint_path = args.weight
-    
-    # n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+
+def init_model(cfg, checkpoint_path, device):
+    model = build_model(cfg, training=False)
     pretrained_dict = torch.load(checkpoint_path, map_location='cpu')
     model_dict = model.state_dict()
     param_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
@@ -141,11 +129,10 @@ def main():
     model = model.to(device)
     model.eval()
     
-    # 预处理图像
-    image_path = os.path.join(os.path.dirname(__file__), args.input)
-    img_tensor, original_img = preprocess_image(image_path)
-    
-    # 预测
+    return model
+
+
+def predict(model, img_tensor, device):
     with torch.no_grad():
         img_tensor = img_tensor.to(device)
         outputs = model(img_tensor)
@@ -153,33 +140,68 @@ def main():
         # 获取预测结果
         outputs_scores = torch.nn.functional.softmax(outputs['pred_logits'], -1)[:, :, 1][0]
         outputs_points = outputs['pred_points'][0]
+        return outputs_scores, outputs_points
+
+
+
+def draw_points_with_origin(original_img, outputs_points, marked_output_path):
+    # 保存带有点标记的图像
+    marked_img = np.array(original_img.copy())
+    for point in outputs_points:
+        # 确保点坐标在合理范围内
+        x, y = int(point[0]), int(point[1])
+        if 0 <= x < marked_img.shape[1] and 0 <= y < marked_img.shape[0]:
+            cv2.circle(marked_img, (x, y), 5, (255, 0, 0), -1)
+            
+    cv2.imwrite(marked_output_path, cv2.cvtColor(marked_img, cv2.COLOR_RGB2BGR))
+    print(f"带标记的图像已保存至: {marked_output_path}")
+
+def main():
+    # 解析参数并加载配置
+    cfg, args = parse_args()
+    
+    # 设置设备
+    device = torch.device(f'cuda:{cfg.GPU_ID}' if torch.cuda.is_available() else 'cpu')
+    print(f"使用设备: {device}")
+    
+    # 构建模型
+    model = init_model(cfg, args.weight, device)
+    
+    # 预处理图像
+    image_path = os.path.join(os.path.dirname(__file__), args.input)
+    img_tensor, original_img = preprocess_image(image_path)
+    
+    
+    # print(f"img_tensor std: {img_tensor.std()}")
+    # print(f"img_tensor mean: {img_tensor.mean()}")
+    outputs_scores, outputs_points = predict(model, img_tensor, device)
+    
+    # 应用阈值过滤
+    threshold = args.threshold
+    
+    # print(f"outputs_scores.shape: {outputs_scores.shape}")
+    # print(f"outputs_scores.std: {outputs_scores.std()}")
+    # print(f"outputs_scores.mean: {outputs_scores.mean()}")
+    
+    
+    mask = outputs_scores > threshold
+    points = outputs_points[mask].detach().cpu().numpy().tolist()
+    predict_cnt = int(mask.sum())
         
-        # 应用阈值过滤
-        threshold = args.threshold
-        mask = outputs_scores > threshold
-        points = outputs_points[mask].detach().cpu().numpy().tolist()
-        predict_cnt = int(mask.sum())
-        
-        print(f"预测人数: {predict_cnt}")
-        
-        # 可视化结果
-        output_dir = args.output
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, os.path.basename(image_path))
-        
-        visualize_prediction(original_img, points, output_path)
-        
-        # 保存带有点标记的图像
-        marked_img = np.array(original_img.copy())
-        for point in points:
-            # 确保点坐标在合理范围内
-            x, y = int(point[0]), int(point[1])
-            if 0 <= x < marked_img.shape[1] and 0 <= y < marked_img.shape[0]:
-                cv2.circle(marked_img, (x, y), 5, (255, 0, 0), -1)
-        
-        marked_output_path = os.path.join(output_dir, 'marked_' + os.path.basename(image_path))
-        cv2.imwrite(marked_output_path, cv2.cvtColor(marked_img, cv2.COLOR_RGB2BGR))
-        print(f"带标记的图像已保存至: {marked_output_path}")
+    print(f"预测人数: {predict_cnt}")
+    
+    # 可视化结果
+    output_dir = args.output
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, os.path.basename(image_path))
+    visualize_prediction(original_img, points, output_path)
+    
+    marked_output_path = os.path.join(output_dir, 'marked_' + os.path.basename(image_path))
+    draw_points_with_origin(original_img, points, marked_output_path)
 
 if __name__ == "__main__":
     main()
+
+
+
+# python pred.py -c configs/SHHA_test.yml -i demo/demo1.jpg -o output/prediction -w ../output/SHHA_best.pth
