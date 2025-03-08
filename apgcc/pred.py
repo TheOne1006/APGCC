@@ -171,10 +171,19 @@ def main():
     image_path = os.path.join(os.path.dirname(__file__), args.input)
     img_tensor, original_img = preprocess_image(image_path)
     
+    
+    # print(f"img_tensor std: {img_tensor.std()}")
+    # print(f"img_tensor mean: {img_tensor.mean()}")
     outputs_scores, outputs_points = predict(model, img_tensor, device)
     
     # 应用阈值过滤
     threshold = args.threshold
+    
+    # print(f"outputs_scores.shape: {outputs_scores.shape}")
+    # print(f"outputs_scores.std: {outputs_scores.std()}")
+    # print(f"outputs_scores.mean: {outputs_scores.mean()}")
+    
+    
     mask = outputs_scores > threshold
     points = outputs_points[mask].detach().cpu().numpy().tolist()
     predict_cnt = int(mask.sum())
