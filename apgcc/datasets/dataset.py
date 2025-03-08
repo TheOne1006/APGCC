@@ -92,7 +92,7 @@ class ImageDataset(Dataset):
                 scale = random.uniform(*scale_range)
 
             if scale * min_size > self.crop_size:
-                img = torch.nn.functional.upsample_bilinear(img.unsqueeze(0), scale_factor=scale).squeeze(0)
+                img = torch.nn.functional.interpolate(img.unsqueeze(0), scale_factor=scale, mode='bilinear', align_corners=False).squeeze(0)
                 point *= scale
             
             # random crop augumentaiton 
@@ -115,7 +115,7 @@ class ImageDataset(Dataset):
                 scale = 2560 / max_size
             else:
                 scale = 1.0
-            img = torch.nn.functional.upsample_bilinear(img.unsqueeze(0), scale_factor=scale).squeeze(0)
+            img = torch.nn.functional.interpolate(img.unsqueeze(0), scale_factor=scale, mode='bilinear', align_corners=False).squeeze(0)
             point *= scale
 
         if not self.train:
