@@ -4,6 +4,11 @@ Official repository for APGCC: Improving Point-based Crowd Counting and Localiza
 
 [Project Page](https://apgcc.github.io/) | [Paper](https://arxiv.org/abs/2405.10589) | [Video](https://www.youtube.com/watch?v=b_ltwfD9dLI&embeds_referring_euri=https%3A%2F%2Fapgcc.github.io%2F&source_ve_path=Mjg2NjY) | [Code](https://github.com/AaronCIH/APGCC/tree/main/apgcc)
 
+
+## Demo:
+
+[hugging face Demo](https://huggingface.co/spaces/yolo12138/peopleCounting)
+
 ## Updates
 - July 2024: ✨ Inference code has been released!
 - July 2024: ✨ APGCC was accepted into ECCV 2024!
